@@ -13,13 +13,13 @@ Covers: FR-001, NFR-001.
 
 Done: TypeScript extension host + React webview + typed bridge, esbuild pipeline, activity-bar panel with a working host⇄webview round-trip, F5 dev launch. Remaining: prototype the editor-tab panel placement and settle OQ-3 (current build uses the sidebar view); panel-state-survives-hide/show is wired via `retainContextWhenHidden` and wants a real test.
 
-## M1 — Core loop (after M0) ⬜
+## M1 — Core loop (after M0) 🟨
 
 The foundation the golden path runs on. These are mostly independent of each other.
 
-- **Auth layer** — `AuthProvider` interface, API-key implementation on SecretStorage, actionable error states, OAuth scaffold behind a build flag. Covers FR-009, part of NFR-003.
-- **Agent core and gated tools** — `AgentBackend` seam over the Claude Agent SDK; streaming `AgentEvent`s to the bridge; the tool gate (read-through-overlay reads, staged writes, gated exec, deny-list); interrupt/redirect. Covers FR-002, FR-003, FR-008, NFR-002/003.
-- **Staging, change stream, and hunk review** — the staging overlay + journal, diff/hunk computation, apply with inverse patches, and the primary-surface UI: virtualized change stream with approve/reject/edit, open-in-editor, reject-feedback into the session. Covers FR-004, plus the ADR-3 invariant test suite.
+- **Auth layer** 🟨 — `AuthProvider` interface + API-key implementation on SecretStorage with set/clear commands (FR-009, part of NFR-003) done. Remaining: actionable error states, OAuth scaffold behind a build flag.
+- **Agent core and gated tools** 🟨 — the `AgentBackend` seam, live streaming with interrupt that takes effect before the next tool call (FR-002, part of FR-008), and a streaming tool-use loop with a gated tool layer — `read_file`/`list_dir`/`write_file`, read-through-overlay reads, staged writes, workspace-confinement + deny-list enforced consistently across all tools and below any mode (FR-003, ADR-6). Remaining: redirect (the other half of FR-008 — injecting a new message into a stopped run); gated command execution; swap in the Claude Agent SDK backend (NFR-003); persist the full tool-aware session transcript (currently cross-turn memory is text-only).
+- **Staging, change stream, and hunk review** 🟨 — the in-memory staging overlay (ADR-3), full-file diff via `diff`, apply-on-approve to disk, and the primary-surface UI: change cards with colored diffs and approve/reject, with reject-feedback into the session (FR-004). Remaining: per-hunk granularity + inline edit, on-disk journal + inverse patches, open-in-editor, virtualization for large diffs, same-file card dedup, and the ADR-3 invariant test suite.
 
 ## M2 — Trust and context (after M1) ⬜
 

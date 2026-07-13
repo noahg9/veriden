@@ -1,28 +1,93 @@
-import { useEffect, useState, type CSSProperties } from 'react';
-import { vscodeApi, type HostToWebview } from './vscode';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { vscodeApi, type HostToWebview, type StagedChange } from './vscode';
 
-type Init = Extract<HostToWebview, { type: 'init' }>;
+type Item =
+  | { kind: 'user'; text: string }
+  | { kind: 'assistant'; text: string }
+  | { kind: 'tool'; label: string }
+  | { kind: 'change'; change: StagedChange; status: 'pending' | 'applied' | 'rejected' | 'superseded' };
 
 export function App() {
-  const [init, setInit] = useState<Init | null>(null);
-  const [pongAt, setPongAt] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [items, setItems] = useState<Item[]>([]);
+  const [running, setRunning] = useState(false);
+  const [input, setInput] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sendingRef = useRef(false);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<HostToWebview>): void => {
       const message = event.data;
-      if (message.type === 'init') {
-        setInit(message);
-      } else if (message.type === 'pong') {
-        setPongAt(message.at);
+      switch (message.type) {
+        case 'init':
+          setConnected(true);
+          setHasApiKey(message.hasApiKey);
+          break;
+        case 'authState':
+          setHasApiKey(message.hasApiKey);
+          break;
+        case 'runState':
+          setRunning(message.running);
+          if (!message.running) sendingRef.current = false;
+          break;
+        case 'agentEvent':
+          applyEvent(message.event);
+          break;
+        case 'changeResolved':
+          setItems((prev) => resolveChange(prev, message.path, message.status));
+          break;
       }
     };
+
+    function applyEvent(ev: Extract<HostToWebview, { type: 'agentEvent' }>['event']): void {
+      switch (ev.type) {
+        case 'text':
+          setItems((prev) => appendText(prev, ev.text));
+          break;
+        case 'error':
+          setItems((prev) => appendText(prev, `\n⚠️ ${ev.message}`));
+          break;
+        case 'tool':
+          setItems((prev) => [...prev, { kind: 'tool', label: ev.label }]);
+          break;
+        case 'change':
+          // A fresh proposal for a path replaces any earlier pending proposal
+          // for that same path in the staging overlay — mark the stale card
+          // superseded so it can never be approved/rejected for content the
+          // user didn't actually review.
+          setItems((prev) => [
+            ...supersedePending(prev, ev.change.path),
+            { kind: 'change', change: ev.change, status: 'pending' },
+          ]);
+          break;
+      }
+    }
+
     window.addEventListener('message', onMessage);
-    // Announce we're mounted; the host replies with `init`.
     vscodeApi.postMessage({ type: 'ready' });
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
-  const connected = init !== null;
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [items, running]);
+
+  function submit(): void {
+    const text = input.trim();
+    if (!text || running || sendingRef.current) return;
+    sendingRef.current = true;
+    setItems((prev) => [...prev, { kind: 'user', text }]);
+    setInput('');
+    vscodeApi.postMessage({ type: 'submitIntent', text });
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
+  }
 
   return (
     <div style={styles.root}>
@@ -37,36 +102,163 @@ export function App() {
                 : 'var(--vscode-testing-iconQueued, #d29922)',
             }}
           />
-          {connected ? 'bridge connected' : 'connecting…'}
+          {connected ? 'connected' : 'connecting…'}
         </span>
       </header>
 
-      <p style={styles.tagline}>
-        The agent conversation and live change stream will live here — the primary surface.
-        This is the M0 shell: the extension host ⇄ webview bridge is wired, and nothing more yet.
-      </p>
+      {!hasApiKey && (
+        <div style={styles.banner}>
+          <span>Set your Anthropic API key to start. It's stored in VS Code SecretStorage.</span>
+          <button style={styles.button} onClick={() => vscodeApi.postMessage({ type: 'setApiKey' })}>
+            Set API key
+          </button>
+        </div>
+      )}
 
-      <div style={styles.card}>
-        <Row label="Workspace" value={init?.workspace.name ?? '—'} />
-        <Row label="Folders" value={init ? String(init.workspace.folderCount) : '—'} />
-        <Row label="Extension" value={init ? `v${init.extensionVersion}` : '—'} />
+      <div ref={scrollRef} style={styles.transcript}>
+        {items.length === 0 && (
+          <p style={styles.empty}>
+            Describe what you want to do. Veriden can read your files and propose edits as
+            reviewable diffs — nothing is written to disk until you approve it.
+          </p>
+        )}
+        {items.map((item, i) => (
+          <ItemView key={i} item={item} />
+        ))}
+        {running && <div style={styles.working}>working…</div>}
       </div>
 
-      <button style={styles.button} onClick={() => vscodeApi.postMessage({ type: 'ping' })}>
-        Ping host
-      </button>
-      {pongAt && <div style={styles.pong}>pong · {pongAt}</div>}
+      <div style={styles.composer}>
+        <textarea
+          style={styles.textarea}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={hasApiKey ? 'Ask Veriden…  (Enter to send, Shift+Enter for newline)' : 'Set an API key first'}
+          rows={3}
+          disabled={!hasApiKey}
+        />
+        {running ? (
+          <button
+            style={{ ...styles.button, ...styles.stop }}
+            onClick={() => vscodeApi.postMessage({ type: 'interrupt' })}
+          >
+            Stop
+          </button>
+        ) : (
+          <button style={styles.button} onClick={submit} disabled={!hasApiKey || !input.trim()}>
+            Send
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function ItemView({ item }: { item: Item }) {
+  if (item.kind === 'tool') {
+    return <div style={styles.tool}>· {item.label}</div>;
+  }
+  if (item.kind === 'change') {
+    return <ChangeCard change={item.change} status={item.status} />;
+  }
   return (
-    <div style={styles.row}>
-      <span style={styles.rowLabel}>{label}</span>
-      <span style={styles.rowValue}>{value}</span>
+    <div style={styles.turn}>
+      <div style={styles.roleLabel}>{item.kind === 'user' ? 'you' : 'veriden'}</div>
+      <div style={styles.turnText}>{item.text}</div>
     </div>
   );
+}
+
+function ChangeCard({
+  change,
+  status,
+}: {
+  change: StagedChange;
+  status: 'pending' | 'applied' | 'rejected' | 'superseded';
+}) {
+  return (
+    <div style={styles.card}>
+      <div style={styles.cardHead}>
+        <span style={styles.cardPath}>
+          {change.kind === 'create' ? 'create' : 'edit'} {change.path}
+        </span>
+        <span style={styles.counts}>
+          <span style={{ color: 'var(--vscode-gitDecoration-addedResourceForeground, #3fb950)' }}>+{change.additions}</span>{' '}
+          <span style={{ color: 'var(--vscode-gitDecoration-deletedResourceForeground, #f85149)' }}>−{change.deletions}</span>
+        </span>
+      </div>
+      <pre style={styles.diff}>
+        {change.diff.split('\n').map((line, i) => (
+          <div key={i} style={diffLineStyle(line)}>
+            {line || ' '}
+          </div>
+        ))}
+      </pre>
+      {status === 'pending' ? (
+        <div style={styles.cardActions}>
+          <button style={styles.button} onClick={() => vscodeApi.postMessage({ type: 'approveChange', path: change.path })}>
+            Approve
+          </button>
+          <button
+            style={{ ...styles.button, ...styles.stop }}
+            onClick={() => vscodeApi.postMessage({ type: 'rejectChange', path: change.path })}
+          >
+            Reject
+          </button>
+        </div>
+      ) : (
+        <div style={styles.resolved}>
+          {status === 'applied' ? '✓ applied' : status === 'rejected' ? '✕ rejected' : '· superseded by a newer proposal'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function appendText(items: Item[], text: string): Item[] {
+  const last = items[items.length - 1];
+  if (last && last.kind === 'assistant') {
+    return [...items.slice(0, -1), { ...last, text: last.text + text }];
+  }
+  return [...items, { kind: 'assistant', text }];
+}
+
+function supersedePending(items: Item[], path: string): Item[] {
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i];
+    if (item.kind === 'change' && item.change.path === path && item.status === 'pending') {
+      const next = items.slice();
+      next[i] = { ...item, status: 'superseded' };
+      return next;
+    }
+  }
+  return items;
+}
+
+function resolveChange(items: Item[], path: string, status: 'applied' | 'rejected'): Item[] {
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i];
+    if (item.kind === 'change' && item.change.path === path && item.status === 'pending') {
+      const next = items.slice();
+      next[i] = { ...item, status };
+      return next;
+    }
+  }
+  return items;
+}
+
+function diffLineStyle(line: string): CSSProperties {
+  if (line.startsWith('+') && !line.startsWith('+++')) {
+    return { color: 'var(--vscode-gitDecoration-addedResourceForeground, #3fb950)' };
+  }
+  if (line.startsWith('-') && !line.startsWith('---')) {
+    return { color: 'var(--vscode-gitDecoration-deletedResourceForeground, #f85149)' };
+  }
+  if (line.startsWith('@@')) {
+    return { opacity: 0.6 };
+  }
+  return {};
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -74,59 +266,79 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: 'var(--vscode-font-family)',
     fontSize: 'var(--vscode-font-size)',
     color: 'var(--vscode-foreground)',
-    padding: '12px 14px',
+    height: '100vh',
+    boxSizing: 'border-box',
+    padding: '10px 12px',
     display: 'flex',
     flexDirection: 'column',
-    gap: 14,
+    gap: 10,
   },
-  header: {
+  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flex: '0 0 auto' },
+  title: { fontSize: 15, fontWeight: 600, margin: 0, letterSpacing: 0.2 },
+  status: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, opacity: 0.8 },
+  dot: { width: 8, height: 8, borderRadius: '50%', display: 'inline-block' },
+  banner: {
+    flex: '0 0 auto',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
+    fontSize: 12,
+    padding: '8px 10px',
+    borderRadius: 6,
+    border: '1px solid var(--vscode-panel-border, rgba(128,128,128,0.35))',
   },
-  title: {
-    fontSize: 15,
-    fontWeight: 600,
-    margin: 0,
-    letterSpacing: 0.2,
-  },
-  status: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
+  transcript: { flex: '1 1 auto', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 },
+  empty: { margin: 0, opacity: 0.6, lineHeight: 1.5 },
+  turn: { display: 'flex', flexDirection: 'column', gap: 3 },
+  roleLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.6, opacity: 0.5 },
+  turnText: { whiteSpace: 'pre-wrap', lineHeight: 1.5, wordBreak: 'break-word' },
+  tool: {
+    fontFamily: 'var(--vscode-editor-font-family, monospace)',
     fontSize: 11,
-    opacity: 0.8,
+    opacity: 0.6,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    display: 'inline-block',
-  },
-  tagline: {
-    margin: 0,
-    lineHeight: 1.5,
-    opacity: 0.85,
-  },
+  working: { fontSize: 11, opacity: 0.5, fontStyle: 'italic' },
   card: {
     border: '1px solid var(--vscode-panel-border, rgba(128,128,128,0.35))',
     borderRadius: 6,
-    padding: '8px 10px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
+    overflow: 'hidden',
   },
-  row: {
+  cardHead: {
     display: 'flex',
     justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'center',
+    gap: 8,
+    padding: '6px 8px',
     fontSize: 12,
+    background: 'var(--vscode-editorWidget-background, rgba(128,128,128,0.08))',
   },
-  rowLabel: { opacity: 0.7 },
-  rowValue: { fontVariantNumeric: 'tabular-nums' },
+  cardPath: { fontFamily: 'var(--vscode-editor-font-family, monospace)' },
+  counts: { fontSize: 11, fontVariantNumeric: 'tabular-nums' },
+  diff: {
+    margin: 0,
+    padding: '6px 8px',
+    maxHeight: 260,
+    overflow: 'auto',
+    fontFamily: 'var(--vscode-editor-font-family, monospace)',
+    fontSize: 11,
+    lineHeight: 1.45,
+    whiteSpace: 'pre',
+  },
+  cardActions: { display: 'flex', gap: 6, padding: '6px 8px', justifyContent: 'flex-end' },
+  resolved: { padding: '6px 8px', fontSize: 11, opacity: 0.7, textAlign: 'right' },
+  composer: { flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 6 },
+  textarea: {
+    fontFamily: 'inherit',
+    fontSize: 12,
+    color: 'var(--vscode-input-foreground)',
+    background: 'var(--vscode-input-background)',
+    border: '1px solid var(--vscode-input-border, var(--vscode-panel-border, rgba(128,128,128,0.35)))',
+    borderRadius: 4,
+    padding: '6px 8px',
+    resize: 'vertical',
+  },
   button: {
-    alignSelf: 'flex-start',
     color: 'var(--vscode-button-foreground)',
     background: 'var(--vscode-button-background)',
     border: 'none',
@@ -135,9 +347,8 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     fontSize: 12,
   },
-  pong: {
-    fontSize: 11,
-    opacity: 0.7,
-    fontVariantNumeric: 'tabular-nums',
+  stop: {
+    color: 'var(--vscode-button-secondaryForeground, var(--vscode-button-foreground))',
+    background: 'var(--vscode-button-secondaryBackground, #6e7681)',
   },
 };

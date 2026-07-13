@@ -56,6 +56,14 @@
       {
         "command": "veriden.openPanel",
         "title": "Veriden: Open Panel"
+      },
+      {
+        "command": "veriden.setApiKey",
+        "title": "Veriden: Set Anthropic API Key"
+      },
+      {
+        "command": "veriden.clearApiKey",
+        "title": "Veriden: Clear Anthropic API Key"
       }
     ]
   },
@@ -67,6 +75,7 @@
     "vscode:prepublish": "npm run package"
   },
   "devDependencies": {
+    "@types/diff": "^5.2.3",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -75,6 +84,8 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
+    "diff": "^5.2.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }
