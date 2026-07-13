@@ -3,11 +3,12 @@ import type { HostToWebview, WebviewToHost } from './bridge';
 import type { AuthProvider } from './auth/provider';
 import type { AgentBackend, AgentTurn } from './agent/backend';
 import type { Staging } from './changes/staging';
+import type { CheckpointStore } from './checkpoint/store';
 
 /**
  * Hosts the primary panel as a webview view in the activity bar (FR-001).
- * M1 slice: send an intent, stream the agent's reply into the conversation,
- * and interrupt mid-run (FR-002, FR-008).
+ * Runs an intent, streams the reply, stages proposed edits for review, and
+ * takes a checkpoint before each run so any run can be rolled back (FR-006).
  */
 export class PanelViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = 'veriden.panel';
@@ -21,6 +22,7 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
     private readonly auth: AuthProvider,
     private readonly backend: AgentBackend,
     private readonly staging: Staging | undefined,
+    private readonly checkpoints: CheckpointStore | undefined,
   ) {
     // Reflect key changes (from the set/clear commands) into the panel.
     context.subscriptions.push(
@@ -53,6 +55,9 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
         case 'rejectChange':
           void this.onResolveChange(message.path, false);
           break;
+        case 'rollbackCheckpoint':
+          void this.onRollback(message.id);
+          break;
         case 'setApiKey':
           void vscode.commands.executeCommand('veriden.setApiKey');
           break;
@@ -70,12 +75,24 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
       extensionVersion: this.version(),
       hasApiKey: await this.auth.hasKey(),
     });
+    await this.pushCheckpoints();
   }
 
   private async onSubmit(text: string): Promise<void> {
     const intent = text.trim();
     if (!intent || this.abort) {
       return;
+    }
+
+    if (this.checkpoints) {
+      try {
+        await this.checkpoints.create(intent);
+        await this.pushCheckpoints();
+      } catch (err) {
+        void vscode.window.showWarningMessage(
+          `Veriden: couldn't take a checkpoint before this run, so it won't be rollback-able. (${errMsg(err)})`,
+        );
+      }
     }
 
     this.abort = new AbortController();
@@ -118,6 +135,36 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
       });
       this.post({ type: 'changeResolved', path: relPath, status: 'rejected' });
     }
+  }
+
+  private async onRollback(id: string): Promise<void> {
+    if (!this.checkpoints) return;
+    const checkpoint = (await this.checkpoints.list()).find((c) => c.id === id);
+    const label = checkpoint ? truncate(checkpoint.label, 60) : 'this checkpoint';
+
+    const choice = await vscode.window.showWarningMessage(
+      `Roll back the workspace to before "${label}"? This overwrites files changed since then and cannot be undone.`,
+      { modal: true },
+      'Roll Back',
+    );
+    if (choice !== 'Roll Back') return;
+
+    try {
+      await this.checkpoints.rollback(id);
+      // Any pending staged proposal was diffed against disk state that may
+      // no longer exist after the restore — discard rather than risk
+      // applying stale content.
+      this.staging?.discardAll();
+      this.post({ type: 'workspaceReset' });
+      void vscode.window.showInformationMessage('Veriden: workspace rolled back.');
+    } catch (err) {
+      void vscode.window.showErrorMessage(`Veriden: rollback failed. (${errMsg(err)})`);
+    }
+  }
+
+  private async pushCheckpoints(): Promise<void> {
+    if (!this.checkpoints) return;
+    this.post({ type: 'checkpoints', items: await this.checkpoints.list() });
   }
 
   private async pushAuthState(): Promise<void> {
@@ -169,4 +216,12 @@ function getNonce(): string {
     text += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return text;
+}
+
+function truncate(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

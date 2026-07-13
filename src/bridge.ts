@@ -7,6 +7,13 @@ export interface WorkspaceInfo {
   folderCount: number;
 }
 
+/** A point-in-time workspace snapshot, taken automatically before each run (FR-006). */
+export interface Checkpoint {
+  id: string;
+  label: string;
+  createdAt: string; // ISO 8601
+}
+
 /** A file edit the agent has staged for review (never yet written to disk). */
 export interface StagedChange {
   path: string;
@@ -30,6 +37,8 @@ export type HostToWebview =
   | { type: 'authState'; hasApiKey: boolean }
   | { type: 'agentEvent'; event: AgentEvent }
   | { type: 'changeResolved'; path: string; status: 'applied' | 'rejected' }
+  | { type: 'checkpoints'; items: Checkpoint[] }
+  | { type: 'workspaceReset' }
   | { type: 'runState'; running: boolean };
 
 /** Messages the webview sends to the extension host. */
@@ -39,4 +48,5 @@ export type WebviewToHost =
   | { type: 'interrupt' }
   | { type: 'approveChange'; path: string }
   | { type: 'rejectChange'; path: string }
+  | { type: 'rollbackCheckpoint'; id: string }
   | { type: 'setApiKey' };

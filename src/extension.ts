@@ -3,13 +3,17 @@ import { PanelViewProvider } from './panel';
 import { ApiKeyAuthProvider } from './auth/apiKey';
 import { MessagesBackend } from './agent/anthropic';
 import { Staging } from './changes/staging';
+import { createCheckpointStore } from './checkpoint/store';
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const auth = new ApiKeyAuthProvider(context.secrets);
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  const staging = root ? new Staging(root) : undefined;
+  const storageDir = (context.storageUri ?? context.globalStorageUri).fsPath;
+
+  const checkpoints = root ? await createCheckpointStore(root, storageDir) : undefined;
+  const staging = root ? new Staging(root, checkpoints) : undefined;
   const backend = new MessagesBackend(auth, staging, root);
-  const provider = new PanelViewProvider(context, auth, backend, staging);
+  const provider = new PanelViewProvider(context, auth, backend, staging, checkpoints);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(PanelViewProvider.viewId, provider, {

@@ -3,6 +3,10 @@ import * as path from 'path';
 import { createTwoFilesPatch } from 'diff';
 import type { StagedChange } from '../bridge';
 
+interface CheckpointHook {
+  beforeWrite(relPath: string): Promise<void>;
+}
+
 /**
  * The staging overlay (ADR-3). Agent writes land here as proposed file content,
  * never on disk directly; disk is mutated only when a change is approved and
@@ -15,7 +19,10 @@ import type { StagedChange } from '../bridge';
 export class Staging {
   private readonly overlay = new Map<string, string>();
 
-  constructor(private readonly root: string) {}
+  constructor(
+    private readonly root: string,
+    private readonly checkpoints?: CheckpointHook,
+  ) {}
 
   stagedContent(relPath: string): string | undefined {
     return this.overlay.get(relPath);
@@ -55,6 +62,7 @@ export class Staging {
   async apply(relPath: string): Promise<void> {
     const content = this.overlay.get(relPath);
     if (content === undefined) return;
+    await this.checkpoints?.beforeWrite(relPath);
     const abs = path.join(this.root, relPath);
     await fs.mkdir(path.dirname(abs), { recursive: true });
     await fs.writeFile(abs, content, 'utf8');
@@ -63,5 +71,11 @@ export class Staging {
 
   discard(relPath: string): void {
     this.overlay.delete(relPath);
+  }
+
+  /** Drop every pending proposal — used after a rollback, since their diffs
+   * were computed against disk state that may no longer exist. */
+  discardAll(): void {
+    this.overlay.clear();
   }
 }

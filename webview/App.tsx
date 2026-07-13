@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { vscodeApi, type HostToWebview, type StagedChange } from './vscode';
+import { vscodeApi, type HostToWebview, type StagedChange, type Checkpoint } from './vscode';
 
 type Item =
   | { kind: 'user'; text: string }
@@ -13,6 +13,8 @@ export function App() {
   const [items, setItems] = useState<Item[]>([]);
   const [running, setRunning] = useState(false);
   const [input, setInput] = useState('');
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [checkpointsOpen, setCheckpointsOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sendingRef = useRef(false);
 
@@ -36,6 +38,15 @@ export function App() {
           break;
         case 'changeResolved':
           setItems((prev) => resolveChange(prev, message.path, message.status));
+          break;
+        case 'checkpoints':
+          setCheckpoints(message.items);
+          break;
+        case 'workspaceReset':
+          // Every pending proposal was diffed against disk state that a
+          // rollback may have just overwritten — supersede them all rather
+          // than risk approving stale content.
+          setItems((prev) => supersedeAllPending(prev));
           break;
       }
     };
@@ -105,6 +116,12 @@ export function App() {
           {connected ? 'connected' : 'connecting…'}
         </span>
       </header>
+
+      <CheckpointsPanel
+        checkpoints={checkpoints}
+        open={checkpointsOpen}
+        onToggle={() => setCheckpointsOpen((v) => !v)}
+      />
 
       {!hasApiKey && (
         <div style={styles.banner}>
@@ -236,6 +253,12 @@ function supersedePending(items: Item[], path: string): Item[] {
   return items;
 }
 
+function supersedeAllPending(items: Item[]): Item[] {
+  return items.map((item) =>
+    item.kind === 'change' && item.status === 'pending' ? { ...item, status: 'superseded' } : item,
+  );
+}
+
 function resolveChange(items: Item[], path: string, status: 'applied' | 'rejected'): Item[] {
   for (let i = items.length - 1; i >= 0; i--) {
     const item = items[i];
@@ -246,6 +269,58 @@ function resolveChange(items: Item[], path: string, status: 'applied' | 'rejecte
     }
   }
   return items;
+}
+
+function CheckpointsPanel({
+  checkpoints,
+  open,
+  onToggle,
+}: {
+  checkpoints: Checkpoint[];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  if (checkpoints.length === 0) return null;
+  return (
+    <div style={styles.checkpoints}>
+      <button style={styles.checkpointsToggle} onClick={onToggle}>
+        {open ? '▾' : '▸'} Checkpoints ({checkpoints.length})
+      </button>
+      {open && (
+        <div style={styles.checkpointsList}>
+          {checkpoints.map((cp) => (
+            <div key={cp.id} style={styles.checkpointRow}>
+              <div style={styles.checkpointInfo}>
+                <div style={styles.checkpointLabel}>{truncate(cp.label, 48)}</div>
+                <div style={styles.checkpointTime}>{formatRelative(cp.createdAt)}</div>
+              </div>
+              <button
+                style={{ ...styles.button, ...styles.stop }}
+                onClick={() => vscodeApi.postMessage({ type: 'rollbackCheckpoint', id: cp.id })}
+              >
+                Roll back
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function truncate(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function formatRelative(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 function diffLineStyle(line: string): CSSProperties {
@@ -288,6 +363,38 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 6,
     border: '1px solid var(--vscode-panel-border, rgba(128,128,128,0.35))',
   },
+  checkpoints: { flex: '0 0 auto' },
+  checkpointsToggle: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--vscode-foreground)',
+    opacity: 0.7,
+    fontSize: 11,
+    padding: 0,
+    cursor: 'pointer',
+    textAlign: 'left',
+  },
+  checkpointsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    marginTop: 6,
+    maxHeight: 160,
+    overflowY: 'auto',
+  },
+  checkpointRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    fontSize: 11,
+    padding: '4px 6px',
+    borderRadius: 4,
+    border: '1px solid var(--vscode-panel-border, rgba(128,128,128,0.35))',
+  },
+  checkpointInfo: { display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 },
+  checkpointLabel: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  checkpointTime: { opacity: 0.6 },
   transcript: { flex: '1 1 auto', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 },
   empty: { margin: 0, opacity: 0.6, lineHeight: 1.5 },
   turn: { display: 'flex', flexDirection: 'column', gap: 3 },
