@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+*.vsix
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+
+# Editor / OS
+.DS_Store
+.vscode-test/
+
+# Claude Code local (machine-specific) settings
+.claude/settings.local.json
+
+# BMAD (removed from this project — ignored so stray installs don't get committed)
+_bmad/
+_bmad-output/

@@ -1,0 +1,81 @@
+{
+  "name": "veriden",
+  "displayName": "Veriden",
+  "description": "Agent-first IDE — the agent conversation and live change stream as the primary surface.",
+  "version": "0.0.1",
+  "publisher": "veriden",
+  "private": true,
+  "license": "Apache-2.0",
+  "author": "Noah",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noahg9/veriden.git"
+  },
+  "bugs": {
+    "url": "https://github.com/noahg9/veriden/issues"
+  },
+  "homepage": "https://github.com/noahg9/veriden#readme",
+  "keywords": [
+    "vscode",
+    "vscode-extension",
+    "ai",
+    "agent",
+    "claude",
+    "coding-agent"
+  ],
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "veriden",
+          "title": "Veriden",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "veriden": [
+        {
+          "id": "veriden.panel",
+          "name": "Panel",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "veriden.openPanel",
+        "title": "Veriden: Open Panel"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "node esbuild.mjs --production",
+    "typecheck": "tsc --noEmit",
+    "vscode:prepublish": "npm run package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

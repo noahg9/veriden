@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Discussion / open question
+    url: https://github.com/noahg9/veriden/discussions
+    about: For design questions, ideas, and the open questions in docs/open-questions.md. Update this URL once the repo is created.
