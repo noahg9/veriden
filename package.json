@@ -9,12 +9,12 @@
   "author": "Noah",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noahg9/foxbagel.git"
+    "url": "https://github.com/noahg9/fox-bagel.git"
   },
   "bugs": {
-    "url": "https://github.com/noahg9/foxbagel/issues"
+    "url": "https://github.com/noahg9/fox-bagel/issues"
   },
-  "homepage": "https://github.com/noahg9/foxbagel#readme",
+  "homepage": "https://github.com/noahg9/fox-bagel#readme",
   "keywords": [
     "vscode",
     "vscode-extension",
