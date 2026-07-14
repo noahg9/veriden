@@ -12,7 +12,7 @@ const MODEL = 'claude-opus-4-8';
 const MAX_TOKENS = 16000;
 const MAX_TURNS = 16;
 const SYSTEM = [
-  'You are Veriden, an agent working inside an agent-first VS Code IDE.',
+  'You are Foxbagel, an agent working inside an agent-first VS Code IDE.',
   'You can read files, list directories, and propose file edits with your tools.',
   'Edits you make with write_file are STAGED for the user to review — they are not',
   'written to disk until the user approves them, so make your best complete proposal.',
@@ -30,7 +30,7 @@ export class MessagesBackend implements AgentBackend {
     try {
       const apiKey = await this.auth.getKey();
       if (!apiKey) {
-        yield { type: 'error', message: 'No API key set. Run “Veriden: Set Anthropic API Key”.' };
+        yield { type: 'error', message: 'No API key set. Run “Foxbagel: Set Anthropic API Key”.' };
         return;
       }
 

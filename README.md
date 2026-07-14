@@ -1,6 +1,6 @@
-# Veriden
+# Foxbagel
 
-> **Pre-alpha.** Veriden is a young project — expect rough edges and rapid change. Feedback and contributors welcome.
+> **Pre-alpha.** Foxbagel is a young project — expect rough edges and rapid change. Feedback and contributors welcome.
 
 An agent-first IDE where the **agent conversation, fused with a live change stream, is the primary surface** — and the code editor is demoted to a review-and-precision-edit pane. Shipping first as a VS Code extension.
 
@@ -39,7 +39,7 @@ npm install
 npm run build
 ```
 
-Open the folder in VS Code and press **F5** to launch an Extension Development Host, then open the panel from the activity-bar icon or the **Veriden: Open Panel** command. Run **Veriden: Set Anthropic API Key** (stored in SecretStorage) and you can hold a live, streaming conversation with the agent — file edits, checkpoints, and the verify loop come next. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full dev workflow.
+Open the folder in VS Code and press **F5** to launch an Extension Development Host, then open the panel from the activity-bar icon or the **Foxbagel: Open Panel** command. Run **Foxbagel: Set Anthropic API Key** (stored in SecretStorage) and you can hold a live, streaming conversation with the agent — file edits, checkpoints, and the verify loop come next. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full dev workflow.
 
 ## Documentation
 

@@ -1,4 +1,4 @@
-# Vision — Veriden, an agent-first IDE
+# Vision — Foxbagel, an agent-first IDE
 
 Status: Draft v1 · 2026-07 · Downstream: [prd.md](prd.md), [architecture.md](architecture.md), [../ROADMAP.md](../ROADMAP.md)
 

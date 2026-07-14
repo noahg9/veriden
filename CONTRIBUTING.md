@@ -27,7 +27,7 @@ npm run watch     # rebuild on change
 npm run typecheck # tsc --noEmit
 ```
 
-Then open the folder in VS Code and press **F5** ("Run Extension") to launch an Extension Development Host with the extension loaded. Open the panel from the activity-bar icon or the **Veriden: Open Panel** command.
+Then open the folder in VS Code and press **F5** ("Run Extension") to launch an Extension Development Host with the extension loaded. Open the panel from the activity-bar icon or the **Foxbagel: Open Panel** command.
 
 Layout:
 

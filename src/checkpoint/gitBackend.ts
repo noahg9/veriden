@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
 import type { CheckpointBackend } from './backend';
 
 const execFileP = promisify(execFile);
-const REF_PREFIX = 'refs/veriden/checkpoints/';
+const REF_PREFIX = 'refs/foxbagel/checkpoints/';
 
 /** Git-ref checkpoints (ADR-4): a shadow commit on a hidden ref, built via a
  * temporary index so the user's real index/branch is never touched. */
@@ -17,7 +17,7 @@ export class GitCheckpointBackend implements CheckpointBackend {
   async snapshot(id: string): Promise<void> {
     const tree = await snapshotTree(this.root);
     const parent = await tryRevParse(this.root, 'HEAD');
-    const args = ['commit-tree', tree, '-m', `veriden checkpoint ${id}`];
+    const args = ['commit-tree', tree, '-m', `foxbagel checkpoint ${id}`];
     if (parent) args.splice(2, 0, '-p', parent);
     const commit = await git(this.root, args);
     await git(this.root, ['update-ref', refFor(id), commit]);
@@ -81,7 +81,7 @@ function refFor(id: string): string {
 }
 
 function tmpIndexPath(): string {
-  return path.join(os.tmpdir(), `veriden-idx-${crypto.randomUUID()}`);
+  return path.join(os.tmpdir(), `foxbagel-idx-${crypto.randomUUID()}`);
 }
 
 /** Stage the entire working tree (respecting .gitignore) into a temp index and return its tree sha. */

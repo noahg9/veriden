@@ -11,7 +11,7 @@ import type { CheckpointStore } from './checkpoint/store';
  * takes a checkpoint before each run so any run can be rolled back (FR-006).
  */
 export class PanelViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewId = 'veriden.panel';
+  public static readonly viewId = 'foxbagel.panel';
 
   private view?: vscode.WebviewView;
   private readonly history: AgentTurn[] = [];
@@ -59,7 +59,7 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
           void this.onRollback(message.id);
           break;
         case 'setApiKey':
-          void vscode.commands.executeCommand('veriden.setApiKey');
+          void vscode.commands.executeCommand('foxbagel.setApiKey');
           break;
       }
     });
@@ -90,7 +90,7 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
         await this.pushCheckpoints();
       } catch (err) {
         void vscode.window.showWarningMessage(
-          `Veriden: couldn't take a checkpoint before this run, so it won't be rollback-able. (${errMsg(err)})`,
+          `Foxbagel: couldn't take a checkpoint before this run, so it won't be rollback-able. (${errMsg(err)})`,
         );
       }
     }
@@ -156,9 +156,9 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
       // applying stale content.
       this.staging?.discardAll();
       this.post({ type: 'workspaceReset' });
-      void vscode.window.showInformationMessage('Veriden: workspace rolled back.');
+      void vscode.window.showInformationMessage('Foxbagel: workspace rolled back.');
     } catch (err) {
-      void vscode.window.showErrorMessage(`Veriden: rollback failed. (${errMsg(err)})`);
+      void vscode.window.showErrorMessage(`Foxbagel: rollback failed. (${errMsg(err)})`);
     }
   }
 
@@ -199,7 +199,7 @@ export class PanelViewProvider implements vscode.WebviewViewProvider {
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Veriden</title>
+    <title>Foxbagel</title>
   </head>
   <body>
     <div id="root"></div>

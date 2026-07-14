@@ -1,4 +1,4 @@
-# Architecture — Veriden (Phase 1)
+# Architecture — Foxbagel (Phase 1)
 
 Status: Draft v1 · Source: [prd.md](prd.md) · Downstream: [../ROADMAP.md](../ROADMAP.md)
 
@@ -46,7 +46,7 @@ Input: intent + repo state + memory + pins/exclusions. Output: `ContextPayload` 
 Staging model: a shadow overlay (in-memory + on-disk journal under the extension's storage path) keyed by file. Renders hunks by diffing overlay vs. disk (use `diff` npm lib). `apply.ts` lands approved hunks atomically and records inverse patches for undo. Rejected hunks generate a structured "user rejected: <hunk>" message back into the session.
 
 ### checkpoint/
-Git-based snapshots (ADR-4). Before each run: create a shadow commit of the working tree on a hidden ref (`refs/veriden/checkpoints/<runId>`) without touching the user's index/branch (plumbing: `git stash create`-style or `git commit-tree` on a temp index). Rollback = restore tree from the ref. Works with deletions/creations, survives restart, fast on large repos, and requires the workspace to be a git repo (acceptable: non-git workspaces get file-copy fallback for changed files only).
+Git-based snapshots (ADR-4). Before each run: create a shadow commit of the working tree on a hidden ref (`refs/foxbagel/checkpoints/<runId>`) without touching the user's index/branch (plumbing: `git stash create`-style or `git commit-tree` on a temp index). Rollback = restore tree from the ref. Works with deletions/creations, survives restart, fast on large repos, and requires the workspace to be a git repo (acceptable: non-git workspaces get file-copy fallback for changed files only).
 
 ### verify/
 Test command detection: look for standard scripts (`package.json` test, `pytest.ini`, `Makefile test`, etc.), else prompt user once and store per workspace. Runner uses child_process with streaming capture; a parser extracts failure summaries (framework-specific parsers for jest/vitest/pytest first, generic tail fallback). Loop controller: land → run → on fail, build failure context → re-invoke agent → cap at K → stuck-state.

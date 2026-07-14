@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { AuthProvider } from './provider';
 
-const SECRET_KEY = 'veriden.anthropicApiKey';
+const SECRET_KEY = 'foxbagel.anthropicApiKey';
 
 /**
  * Stores the Anthropic API key in VS Code SecretStorage (FR-009).

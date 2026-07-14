@@ -1,4 +1,4 @@
-# PRD — Veriden (Phase 1)
+# PRD — Foxbagel (Phase 1)
 
 Status: Draft v1 · Source: [vision.md](vision.md) · Downstream: [architecture.md](architecture.md), [../ROADMAP.md](../ROADMAP.md)
 

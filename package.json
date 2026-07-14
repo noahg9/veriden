@@ -1,20 +1,20 @@
 {
-  "name": "veriden",
-  "displayName": "Veriden",
+  "name": "foxbagel",
+  "displayName": "Foxbagel",
   "description": "Agent-first IDE — the agent conversation and live change stream as the primary surface.",
   "version": "0.0.1",
-  "publisher": "veriden",
+  "publisher": "foxbagel",
   "private": true,
   "license": "Apache-2.0",
   "author": "Noah",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noahg9/veriden.git"
+    "url": "https://github.com/noahg9/foxbagel.git"
   },
   "bugs": {
-    "url": "https://github.com/noahg9/veriden/issues"
+    "url": "https://github.com/noahg9/foxbagel/issues"
   },
-  "homepage": "https://github.com/noahg9/veriden#readme",
+  "homepage": "https://github.com/noahg9/foxbagel#readme",
   "keywords": [
     "vscode",
     "vscode-extension",
@@ -37,16 +37,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "veriden",
-          "title": "Veriden",
+          "id": "foxbagel",
+          "title": "Foxbagel",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "veriden": [
+      "foxbagel": [
         {
-          "id": "veriden.panel",
+          "id": "foxbagel.panel",
           "name": "Panel",
           "type": "webview"
         }
@@ -54,16 +54,16 @@
     },
     "commands": [
       {
-        "command": "veriden.openPanel",
-        "title": "Veriden: Open Panel"
+        "command": "foxbagel.openPanel",
+        "title": "Foxbagel: Open Panel"
       },
       {
-        "command": "veriden.setApiKey",
-        "title": "Veriden: Set Anthropic API Key"
+        "command": "foxbagel.setApiKey",
+        "title": "Foxbagel: Set Anthropic API Key"
       },
       {
-        "command": "veriden.clearApiKey",
-        "title": "Veriden: Clear Anthropic API Key"
+        "command": "foxbagel.clearApiKey",
+        "title": "Foxbagel: Clear Anthropic API Key"
       }
     ]
   },

@@ -8,7 +8,7 @@ Every run must be rollback-able, including file creations and deletions, survivi
 
 ## Decision
 
-Take git-based snapshots before each run: a shadow commit of the working tree on a hidden ref (`refs/veriden/checkpoints/<runId>`), created without touching the user's index/branch (`git stash create`-style, or `git commit-tree` on a temp index). Rollback restores the tree from the ref. Non-git workspaces get a file-copy fallback covering only changed files.
+Take git-based snapshots before each run: a shadow commit of the working tree on a hidden ref (`refs/foxbagel/checkpoints/<runId>`), created without touching the user's index/branch (`git stash create`-style, or `git commit-tree` on a temp index). Rollback restores the tree from the ref. Non-git workspaces get a file-copy fallback covering only changed files.
 
 ## Consequences
 

@@ -103,7 +103,7 @@ export function App() {
   return (
     <div style={styles.root}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Veriden</h1>
+        <h1 style={styles.title}>Foxbagel</h1>
         <span style={styles.status}>
           <span
             style={{
@@ -135,7 +135,7 @@ export function App() {
       <div ref={scrollRef} style={styles.transcript}>
         {items.length === 0 && (
           <p style={styles.empty}>
-            Describe what you want to do. Veriden can read your files and propose edits as
+            Describe what you want to do. Foxbagel can read your files and propose edits as
             reviewable diffs — nothing is written to disk until you approve it.
           </p>
         )}
@@ -151,7 +151,7 @@ export function App() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={hasApiKey ? 'Ask Veriden…  (Enter to send, Shift+Enter for newline)' : 'Set an API key first'}
+          placeholder={hasApiKey ? 'Ask Foxbagel…  (Enter to send, Shift+Enter for newline)' : 'Set an API key first'}
           rows={3}
           disabled={!hasApiKey}
         />
@@ -181,7 +181,7 @@ function ItemView({ item }: { item: Item }) {
   }
   return (
     <div style={styles.turn}>
-      <div style={styles.roleLabel}>{item.kind === 'user' ? 'you' : 'veriden'}</div>
+      <div style={styles.roleLabel}>{item.kind === 'user' ? 'you' : 'foxbagel'}</div>
       <div style={styles.turnText}>{item.text}</div>
     </div>
   );

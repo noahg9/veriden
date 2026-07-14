@@ -20,12 +20,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // Keep the webview alive when hidden so panel state survives hide/show (FR-001).
       webviewOptions: { retainContextWhenHidden: true },
     }),
-    vscode.commands.registerCommand('veriden.openPanel', () => {
+    vscode.commands.registerCommand('foxbagel.openPanel', () => {
       void vscode.commands.executeCommand(`${PanelViewProvider.viewId}.focus`);
     }),
-    vscode.commands.registerCommand('veriden.setApiKey', async () => {
+    vscode.commands.registerCommand('foxbagel.setApiKey', async () => {
       const key = await vscode.window.showInputBox({
-        title: 'Veriden — Anthropic API Key',
+        title: 'Foxbagel — Anthropic API Key',
         prompt: 'Stored in VS Code SecretStorage. Never written to logs or settings.',
         placeHolder: 'sk-ant-…',
         password: true,
@@ -33,12 +33,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       });
       if (key && key.trim()) {
         await auth.setKey(key.trim());
-        void vscode.window.showInformationMessage('Veriden: API key saved.');
+        void vscode.window.showInformationMessage('Foxbagel: API key saved.');
       }
     }),
-    vscode.commands.registerCommand('veriden.clearApiKey', async () => {
+    vscode.commands.registerCommand('foxbagel.clearApiKey', async () => {
       await auth.clearKey();
-      void vscode.window.showInformationMessage('Veriden: API key cleared.');
+      void vscode.window.showInformationMessage('Foxbagel: API key cleared.');
     }),
   );
 }
